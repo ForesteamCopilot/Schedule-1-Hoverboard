@@ -48,45 +48,48 @@ namespace Hoverboard.Factory
         private static AvatarEquippable hoverAvatar;
         private static Skateboard_Equippable hoverEquippable;
         private static StoredItem hoverStored;
-        private static StorableItemDefinition hoverStorableDefinition;
 
         private static Sprite hoverIcon;
         public static MeshFilter hoverBoardFilter;
         public static MeshRenderer hoverBoardRenderer;
-        public static AudioClip jumpAudio;
-        public static AudioClip landAudio;
         public static AudioClip rollingAudio;
 
         public static void Init()
         {
+            Utility.Log("Initializing Hoverboard Factory...");
             refStorage = new GameObject("HoverboardReferenceStorage");
             refStorage.SetActive(false);
             UnityEngine.Object.DontDestroyOnLoad(refStorage);
 
             try
             {
+                Utility.Log("2. Loading Custom Assets");
                 LoadCustomAssets();
-
+                Utility.Log("3. Custom Assets Loaded");
                 if (hoverBoardFilter != null && hoverBoardRenderer != null)
                 {
+                    Utility.Log("4. Creating Prefabs");
                     hoverSkateboard = CreateSkateboardPrefab();
                     if (hoverSkateboard == null)
                     {
                         Utility.Error("Failed to create Skateboard prefab");
                     }
 
+                    Utility.Log("5. Skateboard Prefab Created");
                     hoverAvatar = CreateAvatarEquippablePrefab();
                     if (hoverAvatar == null)
                     {
                         Utility.Error("Failed to create AvatarEquippable prefab");
                     }
 
+                    Utility.Log("6. AvatarEquippable Prefab Created");
                     hoverEquippable = CreateEquippablePrefab();
                     if (hoverEquippable == null)
                     {
                         Utility.Error("Failed to create Equippable prefab");
                     }
 
+                    Utility.Log("7. Equippable Prefab Created");
                     hoverStored = CreateStoredPrefab();
                     if (hoverStored == null)
                     {
@@ -94,9 +97,10 @@ namespace Hoverboard.Factory
                     }
 
                     CreateVisualPrefab();
-
+                    Utility.Log("8. Visual Prefab Created");
                     if (hoverSkateboard != null && hoverAvatar != null && hoverEquippable != null && hoverStored != null)
                     {
+                        Utility.Log("9. Configuring Prefabs");
                         hoverEquippable.AvatarEquippable = hoverAvatar;
                         hoverEquippable.SkateboardPrefab = hoverSkateboard;
                         hoverSkateboard.Equippable = hoverEquippable;
@@ -107,32 +111,83 @@ namespace Hoverboard.Factory
                         hoverSkateboard.Hover_I = HoverboardConfig.Integral.Value;
                         hoverSkateboard.Hover_D = HoverboardConfig.Derivative.Value;
 
+                        Utility.Log("10. Configuring Audio");
                         SkateboardAudio audioController = hoverSkateboard.gameObject.GetComponentInChildren<SkateboardAudio>();
-                        if(audioController != null)
+                        if (audioController != null)
                         {
+                            Utility.Log("Audio controller found");
 
                             if (rollingAudio != null)
                             {
-                                audioController.RollingAudio._audioSource.clip = rollingAudio;
-                                audioController.DirtRollingAudio._audioSource.clip = rollingAudio;
-                            }
+                                Utility.Log("Rolling audio clip is not null");
 
+                                if (audioController.RollingAudio != null)
+                                {
+                                    Utility.Log("RollingAudio component exists");
+
+                                    if (audioController.RollingAudio._audioSource != null)
+                                    {
+                                        Utility.Log("RollingAudio._audioSource exists");
+                                        audioController.RollingAudio._audioSource.clip = rollingAudio;
+                                        Utility.Log("Rolling audio clip assigned successfully");
+                                    }
+                                    else
+                                    {
+                                        Utility.Error("RollingAudio._audioSource is NULL");
+                                    }
+                                }
+                                else
+                                {
+                                    Utility.Error("audioController.RollingAudio is NULL");
+                                }
+
+                                if (audioController.DirtRollingAudio != null)
+                                {
+                                    Utility.Log("DirtRollingAudio component exists");
+
+                                    if (audioController.DirtRollingAudio._audioSource != null)
+                                    {
+                                        Utility.Log("DirtRollingAudio._audioSource exists");
+                                        audioController.DirtRollingAudio._audioSource.clip = rollingAudio;
+                                        Utility.Log("Dirt rolling audio clip assigned successfully");
+                                    }
+                                    else
+                                    {
+                                        Utility.Error("DirtRollingAudio._audioSource is NULL");
+                                    }
+                                }
+                                else
+                                {
+                                    Utility.Error("audioController.DirtRollingAudio is NULL");
+                                }
+                            }
+                            else
+                            {
+                                Utility.Error("rollingAudio clip is NULL");
+                            }
+                        }
+                        else
+                        {
+                            Utility.Error("Audio controller is NULL");
                         }
 
+                        Utility.Log("11. Configuring Visuals");
                         SkateboardVisuals visuals = hoverSkateboard.gameObject.GetComponentInChildren<SkateboardVisuals>();
-                        if(visuals != null)
+                        if (visuals != null)
                         {
                             hoverVisuals = visuals;
                             hoverVisuals.MaxBoardLean = HoverboardConfig.MaxBoardLean.Value;
                             hoverVisuals.BoardLeanRate = HoverboardConfig.BoardLeanRate.Value;
                         }
 
+                        Utility.Log("12. Configuring Effects");
                         SkateboardEffects effects = hoverSkateboard.gameObject.GetComponentInChildren<SkateboardEffects>();
-                        if(effects != null)
+                        if (effects != null)
                         {
                             hoverEffects = effects;
                         }
 
+                        Utility.Log("13. Creating Storable");
                         CreateStorableDefinition();
                     }
                     else
@@ -160,21 +215,12 @@ namespace Hoverboard.Factory
             }
         }
 
-        public static void DumpEmbeddedResources()
-        {
-            var asm = typeof(Core).Assembly;
-            foreach (var name in asm.GetManifestResourceNames())
-                MelonLogger.Msg($"Embedded resource: {name}");
-        }
-
         public static void LoadCustomAssets()
         {
-            DumpEmbeddedResources();
             AssetBundleUtils.LoadAssetBundle("hoverboard");
             //AssetBundleUtils.ListBundleContents("hoverboard");
 
             GameObject hoverboardAsset = AssetBundleUtils.LoadAssetFromBundle<GameObject>("hoverboard.prefab", "hoverboard");
-
             if (hoverboardAsset != null && hoverboardPrefab == null)
             {
                 hoverboardPrefab = GameObject.Instantiate(hoverboardAsset, refStorage.transform);
@@ -193,20 +239,22 @@ namespace Hoverboard.Factory
                 return;
             }
 
-            Sprite icon = AssetBundleUtils.LoadAssetFromBundle<Sprite>("hoverboardvisual_icon.png", "Hoverboard.Assets.hoverboard");
+            Sprite icon = AssetBundleUtils.LoadAssetFromBundle<Sprite>("hoverboardvisual_icon.png", "hoverboard");
             if (icon != null)
             {
                 hoverIcon = icon;
+                UnityEngine.Object.DontDestroyOnLoad(hoverIcon);
             }
             else
             {
                 Utility.Error("Failed to load icon sprite - icon will be missing");
             }
 
-            AudioClip rollingSfx = AssetBundleUtils.LoadAssetFromBundle<AudioClip>("hoverloop1.mp3", "Hoverboard.Assets.hoverboard");
-            if(rollingSfx != null)
+            AudioClip rollingSfx = AssetBundleUtils.LoadAssetFromBundle<AudioClip>("hoverloop1.mp3", "hoverboard");
+            if (rollingSfx != null)
             {
                 rollingAudio = rollingSfx;
+                UnityEngine.Object.DontDestroyOnLoad(rollingAudio);
             }
             else
             {
@@ -277,14 +325,14 @@ namespace Hoverboard.Factory
             {
                 container.GetComponent<MeshFilter>().mesh = hoverBoardFilter.mesh;
                 container.GetComponent<MeshRenderer>().materials = hoverBoardRenderer.materials;
-                
+
                 // Check for nested BoardModel
                 Transform boardModel = container.Find("BoardModel");
                 if (boardModel != null)
                 {
                     boardModel.GetComponent<MeshFilter>().mesh = hoverBoardFilter.mesh;
                     boardModel.GetComponent<MeshRenderer>().materials = hoverBoardRenderer.materials;
-                    
+
                     // Check for deeply nested visual
                     Transform boardVisual = boardModel.Find("GoldSkateboardVisual/GoldSkateboard/BoardContainer/Board");
                     if (boardVisual != null)

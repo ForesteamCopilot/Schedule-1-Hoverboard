@@ -22,17 +22,6 @@ using ScheduleOne.NPCs.CharacterClasses;
 using ScheduleOne.Skating;
 #endif
 
-
-// Conditional compilation example for IL2CPP and MONO
-// #if <Build config> is used to check the build configuration
-#if IL2CPP
-using Il2CppScheduleOne.NPCs; // IL2Cpp using directive
-#elif MONO
-using ScheduleOne.NPCs; // Mono using directive
-#else
-// Other build configs
-#endif
-
 [assembly: MelonInfo(typeof(Hoverboard.Core), Hoverboard.BuildInfo.Name, Hoverboard.BuildInfo.Version, Hoverboard.BuildInfo.Author, Hoverboard.BuildInfo.DownloadLink)]
 [assembly: MelonColor(255, 191, 0, 255)]
 [assembly: MelonGame("TVGS", "Schedule I")]
@@ -54,12 +43,10 @@ namespace Hoverboard
 
         public override void OnInitializeMelon()
         {
-            //AssetBundleUtils.Initialize(this);
             HoverboardConfig.Initialize();
         }
         public override void OnLateInitializeMelon()
         {
-            AssetBundleUtils.TestBundleLoading();
             LoadManager.Instance.onLoadComplete.AddListener((UnityAction)InitMod);
         }
 

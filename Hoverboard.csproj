@@ -973,7 +973,6 @@
 		<Reference Include="UnityEngine.Il2CppAssetBundleManager">
 			<HintPath>$(S1Dir)\MelonLoader\net6\UnityEngine.Il2CppAssetBundleManager.dll</HintPath>
 		</Reference>
-
 	</ItemGroup>
 
 </Project>
