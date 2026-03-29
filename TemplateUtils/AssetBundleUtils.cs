@@ -13,9 +13,15 @@ namespace Hoverboard.TemplateUtils
 {
     public static class AssetBundleUtils
     {
-        static Core mod = MelonAssembly.FindMelonInstance<Core>();
-        static MelonAssembly melonAssembly = mod.MelonAssembly;
+        static Core mod;
+        static MelonAssembly melonAssembly;
         static Dictionary<string, AssetBundle> assetBundles = new Dictionary<string, AssetBundle>();
+
+        public static void Initialize(Core coreMod)
+        {
+            mod = coreMod;
+            melonAssembly = mod.MelonAssembly;
+        }
 
         public static AssetBundle LoadAssetBundle(string bundleFileName)
         {

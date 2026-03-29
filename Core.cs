@@ -34,7 +34,7 @@ namespace Hoverboard
         public const string Description = "Adds a hoverboard to the game...because why not?";
         public const string Author = "OverweightUnicorn";
         public const string Company = "UnicornsCanMod";
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
         public const string DownloadLink = null;
     }
 
@@ -43,6 +43,7 @@ namespace Hoverboard
 
         public override void OnInitializeMelon()
         {
+            AssetBundleUtils.Initialize(this);
             HoverboardConfig.Initialize();
         }
         public override void OnLateInitializeMelon()
@@ -56,6 +57,9 @@ namespace Hoverboard
             if (sceneName == "Main" && HoverboardFactory.hoverboardPrefab == null)
             {
                 HoverboardFactory.Init();
+            } else
+            {
+                HoverboardFactory.Reset();
             }
         }
 
@@ -64,16 +68,13 @@ namespace Hoverboard
             var jeff = GameObject.FindObjectOfType<Jeff>();
             if (jeff != null)
             {
-                Utility.Success("Found Jeff in the scene");
                 GameObject goJeff = jeff.gameObject;
                 Transform dialogue = goJeff.transform.Find("Dialogue");
                 if (dialogue != null)
                 {
-                    Utility.Success("Found Dialogue child on Jeff");
                     DialogueController_SkateboardSeller sellerController = dialogue.gameObject.GetComponent<DialogueController_SkateboardSeller>();
                     if (sellerController != null && Registry.ItemExists(HoverboardFactory.ITEM_ID))
                     {
-                        Utility.Success("Found seller controller"); 
                         ItemDefinition hoverItemDef = Registry.GetItem<ItemDefinition>(HoverboardFactory.ITEM_ID);
                         var hoverOption = new DialogueController_SkateboardSeller.Option()
                         {
@@ -93,52 +94,10 @@ namespace Hoverboard
                     }
                 }
                 else
-                { 
+                {
                     Utility.Error("Could not find Dialogue child on Jeff");
                 }
             }
-        }
-
-        [HarmonyPatch(typeof(SkateboardAudio))]
-        public static class SkateboardAudio_Patch
-        {
-
-            [HarmonyPrefix]
-            [HarmonyPatch(nameof(SkateboardAudio.Start))]
-            public static bool StartPrefix(SkateboardAudio __instance)
-            {
-                if (__instance != null && __instance.transform.parent.name.Contains("Hoverboard"))
-                {
-                    __instance.RollingAudio.Play();
-                    __instance.DirtRollingAudio.Play();
-                    __instance.WindAudio.Play();
-                }
-                return false;
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPatch(nameof(SkateboardAudio.PlayLand))]
-            public static bool PlayLandPrefix(SkateboardAudio __instance)
-            {
-                if (__instance != null && __instance.transform.parent.name.Contains("Hoverboard"))
-                {
-                    return false;
-                }
-                return true;
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPatch(nameof(SkateboardAudio.PlayJump))]
-            public static bool PlayJumpPrefix(SkateboardAudio __instance,float force)
-            {
-                if (__instance != null && __instance.transform.parent.name.Contains("Hoverboard"))
-                {
-                    return false;
-                }
-                return true;
-            }
-
-
         }
     }
 

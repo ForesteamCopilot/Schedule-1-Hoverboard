@@ -5,8 +5,8 @@
 		<RootNamespace>Hoverboard</RootNamespace>
 		<LangVersion>default</LangVersion>
 		<IsPackable>false</IsPackable>
-		<AssemblyVersion>1.0.0</AssemblyVersion>
-		<FileVersion>1.0.0</FileVersion>
+		<AssemblyVersion>1.0.1</AssemblyVersion>
+		<FileVersion>1.0.1</FileVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -58,6 +58,7 @@
   <!--Publicizer Entries-->
   <ItemGroup Condition="'$(Configuration)' == 'MONO'">
     <Publicize Include="Assembly-CSharp" />
+    <Publicize Include="ScheduleOne.Core" />
   </ItemGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">

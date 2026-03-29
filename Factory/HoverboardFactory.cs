@@ -1,34 +1,27 @@
-﻿using Hoverboard.Config;
+using Hoverboard.Config;
 using Hoverboard.TemplateUtils;
 #if IL2CPP
 using Il2CppScheduleOne;
-using Il2CppScheduleOne.Audio;
 using Il2CppScheduleOne.AvatarFramework.Equipping;
 using Il2CppScheduleOne.Core.Items.Framework;
 using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.Equipping;
+using Il2CppScheduleOne.Experimental;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Skating;
 using Il2CppScheduleOne.Storage;
+using Il2CppScheduleOne.Weather;
 #elif MONO
 using ScheduleOne;
-using ScheduleOne.Audio;
 using ScheduleOne.AvatarFramework.Equipping;
 using ScheduleOne.Core.Items.Framework;
 using ScheduleOne.DevUtilities;
-using ScheduleOne.Equipping;
+using ScheduleOne.Experimental;
 using ScheduleOne.ItemFramework;
 using ScheduleOne.Skating;
 using ScheduleOne.Storage;
+using ScheduleOne.Weather;
 #endif
-using MelonLoader;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace Hoverboard.Factory
 {
@@ -48,48 +41,48 @@ namespace Hoverboard.Factory
         private static AvatarEquippable hoverAvatar;
         private static Skateboard_Equippable hoverEquippable;
         private static StoredItem hoverStored;
+        private static SkateboardData hoverData;
 
         private static Sprite hoverIcon;
         public static MeshFilter hoverBoardFilter;
         public static MeshRenderer hoverBoardRenderer;
         public static AudioClip rollingAudio;
 
+        // Original position of trail[0] and the midpoint between all trails,
+        // cached once on first call so they never need to be recalculated.
+        private static Vector3? _trail0OriginalLocalPosition;
+        private static Vector3? _trailMidpointLocalPosition;
+
         public static void Init()
         {
-            Utility.Log("Initializing Hoverboard Factory...");
             refStorage = new GameObject("HoverboardReferenceStorage");
             refStorage.SetActive(false);
             UnityEngine.Object.DontDestroyOnLoad(refStorage);
 
             try
             {
-                Utility.Log("2. Loading Custom Assets");
                 LoadCustomAssets();
-                Utility.Log("3. Custom Assets Loaded");
+
                 if (hoverBoardFilter != null && hoverBoardRenderer != null)
                 {
-                    Utility.Log("4. Creating Prefabs");
                     hoverSkateboard = CreateSkateboardPrefab();
                     if (hoverSkateboard == null)
                     {
                         Utility.Error("Failed to create Skateboard prefab");
                     }
 
-                    Utility.Log("5. Skateboard Prefab Created");
                     hoverAvatar = CreateAvatarEquippablePrefab();
                     if (hoverAvatar == null)
                     {
                         Utility.Error("Failed to create AvatarEquippable prefab");
                     }
 
-                    Utility.Log("6. AvatarEquippable Prefab Created");
                     hoverEquippable = CreateEquippablePrefab();
                     if (hoverEquippable == null)
                     {
                         Utility.Error("Failed to create Equippable prefab");
                     }
 
-                    Utility.Log("7. Equippable Prefab Created");
                     hoverStored = CreateStoredPrefab();
                     if (hoverStored == null)
                     {
@@ -97,64 +90,65 @@ namespace Hoverboard.Factory
                     }
 
                     CreateVisualPrefab();
-                    Utility.Log("8. Visual Prefab Created");
+
                     if (hoverSkateboard != null && hoverAvatar != null && hoverEquippable != null && hoverStored != null)
                     {
-                        Utility.Log("9. Configuring Prefabs");
                         hoverEquippable.AvatarEquippable = hoverAvatar;
                         hoverEquippable.SkateboardPrefab = hoverSkateboard;
                         hoverSkateboard.Equippable = hoverEquippable;
-                        hoverSkateboard.HoverHeight = HoverboardConfig.HoverHeight.Value;
-                        hoverSkateboard.HoverRayLength = HoverboardConfig.HoverHeight.Value + 0.05f;
                         hoverSkateboard.SlowOnTerrain = false;
-                        hoverSkateboard.Hover_P = HoverboardConfig.Proportional.Value;
-                        hoverSkateboard.Hover_I = HoverboardConfig.Integral.Value;
-                        hoverSkateboard.Hover_D = HoverboardConfig.Derivative.Value;
+                        var skateData = UnityEngine.ScriptableObject.Instantiate(hoverSkateboard._defaultData,refStorage.transform);
 
-                        Utility.Log("10. Configuring Audio");
+                        if (skateData != null) { 
+                            hoverData = skateData;
+                            hoverSkateboard._defaultData = skateData;
+                        }
+
+                        ApplyHoverSettings();
+
+                        NeutralizeRainOverride();
+
                         SkateboardAudio audioController = hoverSkateboard.gameObject.GetComponentInChildren<SkateboardAudio>();
                         if (audioController != null)
                         {
-                            Utility.Log("Audio controller found");
+                            AudioSource rollingFx = audioController.transform.Find("Audio Source (Skateboard rolling, FX)")?.GetComponent<AudioSource>();
+                            AudioSource dirtRollingFx = audioController.transform.Find("Audio Source (Skateboard rolling, FX) (1)")?.GetComponent<AudioSource>();
+
+                            AudioSource jumpFx = audioController.transform.Find("Audio Source (, FX)")?.GetComponent<AudioSource>();
+                            AudioSource landFx = audioController.transform.Find("Audio Source (, FX)")?.GetComponent<AudioSource>();
+
+                            if (audioController.JumpAudio != null)
+                            {
+                                hoverSkateboard.OnJump.RemoveAllListeners();
+                                AudioClip jumpClip = audioController.JumpAudio.gameObject.GetComponent<AudioSource>().clip;
+                                audioController.JumpAudio.gameObject.SetActive(false);
+                                if (jumpClip == null)
+                                {
+                                    audioController.JumpAudio.gameObject.GetComponent<AudioSource>().clip = null;
+                                }
+                            }
+
+                            if (audioController.LandAudio != null)
+                            {
+                                audioController.LandAudio.gameObject.SetActive(false);
+                            }
 
                             if (rollingAudio != null)
                             {
-                                Utility.Log("Rolling audio clip is not null");
 
-                                if (audioController.RollingAudio != null)
+                                if (rollingFx != null)
                                 {
-                                    Utility.Log("RollingAudio component exists");
-
-                                    if (audioController.RollingAudio._audioSource != null)
-                                    {
-                                        Utility.Log("RollingAudio._audioSource exists");
-                                        audioController.RollingAudio._audioSource.clip = rollingAudio;
-                                        Utility.Log("Rolling audio clip assigned successfully");
-                                    }
-                                    else
-                                    {
-                                        Utility.Error("RollingAudio._audioSource is NULL");
-                                    }
+                                    rollingFx.clip = rollingAudio;
                                 }
                                 else
                                 {
-                                    Utility.Error("audioController.RollingAudio is NULL");
+                                    Utility.Error("Rolling FX is NULL");
                                 }
 
-                                if (audioController.DirtRollingAudio != null)
+                                if (dirtRollingFx != null)
                                 {
-                                    Utility.Log("DirtRollingAudio component exists");
-
-                                    if (audioController.DirtRollingAudio._audioSource != null)
-                                    {
-                                        Utility.Log("DirtRollingAudio._audioSource exists");
-                                        audioController.DirtRollingAudio._audioSource.clip = rollingAudio;
-                                        Utility.Log("Dirt rolling audio clip assigned successfully");
-                                    }
-                                    else
-                                    {
-                                        Utility.Error("DirtRollingAudio._audioSource is NULL");
-                                    }
+                                    dirtRollingFx.clip = rollingAudio;
+                                    Utility.Log("Dirt rolling audio clip assigned successfully");
                                 }
                                 else
                                 {
@@ -185,6 +179,7 @@ namespace Hoverboard.Factory
                         if (effects != null)
                         {
                             hoverEffects = effects;
+                            ApplyTrailSettings();
                         }
 
                         Utility.Log("13. Creating Storable");
@@ -215,10 +210,215 @@ namespace Hoverboard.Factory
             }
         }
 
+        /// <summary>
+        /// Returns the live SkateboardSettings from _defaultData via reflection.
+        /// Writing to this object persists across weather changes since OnWeatherChange clones from it.
+        /// </summary>
+        public static SkateboardSettings GetDefaultSettings()
+        {
+            if (hoverSkateboard == null) return null;
+
+            if (hoverSkateboard.DefaultSettings == null) return null;
+            return hoverSkateboard.DefaultSettings;
+        }
+
+        /// <summary>
+        /// Writes all hover-related config values into _defaultData.Settings so they survive
+        /// weather changes, then triggers a settings refresh via OnWeatherChange with clear skies.
+        /// </summary>
+        public static void ApplyHoverSettings()
+        {
+            SkateboardSettings settings = GetDefaultSettings();
+            if (settings == null)
+            {
+                Utility.Error("ApplyHoverSettings: could not get default settings");
+                return;
+            }
+
+            settings.HoverHeight = HoverboardConfig.HoverHeight.Value;
+            settings.TopSpeed_Kmh = HoverboardConfig.TopSpeed.Value;
+            settings.HoverRayLength = HoverboardConfig.HoverHeight.Value + 0.05f;
+            settings.Hover_P = HoverboardConfig.Proportional.Value;
+            settings.Hover_I = HoverboardConfig.Integral.Value;
+            settings.Hover_D = HoverboardConfig.Derivative.Value;
+
+            // Refresh _settings from the updated _defaultData by simulating a weather update
+            // with no rain so no rain blend is applied
+            RefreshActiveSettings();
+
+            Utility.Log($"ApplyHoverSettings: HoverHeight={settings.HoverHeight}, P={settings.Hover_P}, I={settings.Hover_I}, D={settings.Hover_D}");
+        }
+
+        /// <summary>
+        /// Triggers OnWeatherChange with a clear-sky WeatherConditions so _settings is rebuilt
+        /// from _defaultData without any rain blend.
+        /// </summary>
+        public static void RefreshActiveSettings()
+        {
+            if (hoverSkateboard == null) return;
+            hoverSkateboard.OnWeatherChange(new WeatherConditions());
+        }
+
+        /// <summary>
+        /// Replaces _rainOverrideData with a new SkateboardOverrideData that has all hover
+        /// flags excluded, preventing rain from affecting hover height, force, or PID values.
+        /// </summary>
+        private static void NeutralizeRainOverride()
+        {
+            if (hoverSkateboard == null) return;
+
+            if (hoverSkateboard._rainOverrideData == null)
+            {
+                Utility.Error("NeutralizeRainOverride: _rainOverrideData is null on hoverSkateboard - cannot neutralize rain override");
+                return;
+            }
+
+            // Create a new override asset with no hover flags set - all hover fields will use
+            // -1 sentinel in Blend(), which the game treats as "don't override" (multiplier stays 1)
+            SkateboardOverrideData neutralOverride = ScriptableObject.CreateInstance<SkateboardOverrideData>();
+            neutralOverride.Categories =
+               SkateboardOverrideData.OverrideCategory.Turning |
+                 SkateboardOverrideData.OverrideCategory.Friction;
+            // Hover category intentionally omitted - no hover flags
+
+            neutralOverride.Settings = new SkateboardSettings
+            {
+                // Sentinel -1 = "no override" in Blend()
+                TurnForce = -1f,
+                TurnChangeRate = -1f,
+                TurnReturnToRestRate = -1f,
+                TurnSpeedBoost = -1f,
+                Gravity = -1f,
+                BrakeForce = -1f,
+                ReverseTopSpeed_Kmh = -1f,
+                RotationClampForce = -1f,
+                LongitudinalFrictionMultiplier = 0.8f, // rain makes surface slippery
+                LateralFrictionForceMultiplier = 0.8f,
+                JumpForce = -1f,
+                JumpDuration_Min = -1f,
+                JumpDuration_Max = -1f,
+                JumpForwardBoost = -1f,
+                // All hover fields use -1 so Blend() leaves them untouched
+                HoverForce = -1f,
+                HoverRayLength = -1f,
+                HoverHeight = -1f,
+                Hover_P = -1f,
+                Hover_I = -1f,
+                Hover_D = -1f,
+                TopSpeed_Kmh = -1f,
+                PushForceMultiplier = -1f,
+                PushForceDuration = -1f,
+                PushDelay = -1f,
+                AirMovementForce = -1f,
+                AirMovementJumpReductionDuration = -1f,
+            };
+
+            hoverSkateboard._rainOverrideData = neutralOverride;
+            Utility.Log("NeutralizeRainOverride: rain override replaced - hover fields protected");
+        }
+
+        /// <summary>
+        /// Applies all trail settings from config onto the prefab's SkateboardEffects.
+        /// Called once during Init - changes are baked into the prefab so every
+        /// subsequent instantiation inherits them automatically via Awake().
+        /// </summary>
+        public static void ApplyTrailSettings()
+        {
+            if (hoverEffects == null)
+            {
+                Utility.Error("ApplyTrailSettings: hoverEffects is null");
+                return;
+            }
+
+            TrailRenderer[] trails = hoverEffects.Trails;
+            if (trails == null || trails.Length == 0)
+            {
+                Utility.Error("ApplyTrailSettings: no trails found on hoverEffects");
+                return;
+            }
+
+            // Cache original position and midpoint once - these never change after Init
+            if (_trail0OriginalLocalPosition == null)
+            {
+                _trail0OriginalLocalPosition = trails[0].transform.localPosition;
+
+                Vector3 midpoint = Vector3.zero;
+                for (int i = 0; i < trails.Length; i++)
+                    midpoint += trails[i].transform.localPosition;
+                midpoint /= trails.Length;
+                _trailMidpointLocalPosition = midpoint;
+            }
+
+            int count = Mathf.Clamp(HoverboardConfig.TrailCount.Value, 0, trails.Length);
+            float width = HoverboardConfig.TrailWidth.Value;
+            float spread = HoverboardConfig.TrailSpread.Value;
+
+            if (count == 0)
+            {
+                // Hide all trails
+                foreach (var t in trails)
+                    t.gameObject.SetActive(false);
+            }
+            else if (count == 1)
+            {
+                // Single trail centred at midpoint, second hidden
+                trails[0].gameObject.SetActive(true);
+                trails[0].transform.localPosition = _trailMidpointLocalPosition.Value;
+                ApplyTrailAppearance(trails[0], width, HoverboardConfig.TrailColors[0].Value);
+
+                for (int i = 1; i < trails.Length; i++)
+                    trails[i].gameObject.SetActive(false);
+            }
+            else
+            {
+                // Dual trails: trail[0] back at original, trail[1] mirrored, both visible
+                // Spread symmetrically around the midpoint X
+                float centreX = _trailMidpointLocalPosition.Value.x;
+                float halfSpread = spread / 2f;
+
+                trails[0].gameObject.SetActive(true);
+                trails[0].transform.localPosition = _trail0OriginalLocalPosition.Value;
+                ApplyTrailAppearance(trails[0], width, HoverboardConfig.TrailColors[0].Value);
+
+                if (trails.Length > 1)
+                {
+                    trails[1].gameObject.SetActive(true);
+                    // Mirror trail[0]'s X offset around the centre
+                    float trail0OffsetFromCentre = _trail0OriginalLocalPosition.Value.x - centreX;
+                    Vector3 trail1Pos = _trailMidpointLocalPosition.Value;
+                    trail1Pos.x = centreX - trail0OffsetFromCentre;
+                    // Apply spread on top
+                    trails[0].transform.localPosition = new Vector3(
+                centreX - halfSpread,
+               _trail0OriginalLocalPosition.Value.y,
+                  _trail0OriginalLocalPosition.Value.z);
+                    trails[1].transform.localPosition = new Vector3(
+             centreX + halfSpread,
+                  trail1Pos.y,
+           trail1Pos.z);
+                    ApplyTrailAppearance(trails[1], width, HoverboardConfig.TrailColors[1].Value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Applies width and color to a single TrailRenderer.
+        /// Alpha is preserved from the prefab so SkateboardEffects speed-fade still works.
+        /// </summary>
+        private static void ApplyTrailAppearance(TrailRenderer trail, float width, Color color)
+        {
+            trail.startWidth = width;
+            trail.endWidth = 0f;
+
+            float existingAlpha = trail.startColor.a;
+            trail.startColor = new Color(color.r, color.g, color.b, existingAlpha);
+            trail.endColor = new Color(color.r, color.g, color.b, 0f);
+        }
+
+
         public static void LoadCustomAssets()
         {
             AssetBundleUtils.LoadAssetBundle("hoverboard");
-            //AssetBundleUtils.ListBundleContents("hoverboard");
 
             GameObject hoverboardAsset = AssetBundleUtils.LoadAssetFromBundle<GameObject>("hoverboard.prefab", "hoverboard");
             if (hoverboardAsset != null && hoverboardPrefab == null)
@@ -284,14 +484,11 @@ namespace Hoverboard.Factory
 
         }
 
-        public static Skateboard CreateSkateboardPrefab()
+        private static void HideTrucks(Transform prefab, string path)
         {
-            GameObject prefab = Resources.Load<GameObject>("skateboards/goldenskateboard/GoldSkateboard");
-            var skateboardPrefab = GameObject.Instantiate(prefab, refStorage.transform);
-            skateboardPrefab.name = "Hoverboard";
+            Transform boardContainer = prefab.Find(path);
+            if (boardContainer == null) return;
 
-            // Hide the trucks since hoverboards don't need them
-            Transform boardContainer = skateboardPrefab.transform.Find("Model/Skateboard");
             if (boardContainer != null)
             {
                 Transform truck1 = boardContainer.Find("Truck");
@@ -318,6 +515,17 @@ namespace Hoverboard.Factory
             {
                 Utility.Error("BoardContainer not found - unable to hide trucks");
             }
+
+        }
+
+        public static Skateboard CreateSkateboardPrefab()
+        {
+            GameObject prefab = Resources.Load<GameObject>("skateboards/goldenskateboard/GoldSkateboard");
+            var skateboardPrefab = GameObject.Instantiate(prefab, refStorage.transform);
+            skateboardPrefab.name = "Hoverboard";
+            
+            // Hide the trucks since hoverboards don't need them
+            HideTrucks(skateboardPrefab.transform, "Model/Skateboard");
 
             // Replace the board mesh and materials
             Transform container = skateboardPrefab.transform.Find("Model/Skateboard/BoardContainer/Board");
@@ -352,6 +560,10 @@ namespace Hoverboard.Factory
             GameObject prefab = Resources.Load<GameObject>("skateboards/goldenskateboard/GoldSkateboard_AvatarEquippable");
             var avatarEquippablePrefab = GameObject.Instantiate(prefab, refStorage.transform);
             avatarEquippablePrefab.name = "Hoverboard_AvatarEquippable";
+
+            // Hide the trucks since hoverboards don't need them
+            HideTrucks(avatarEquippablePrefab.transform, "GoldSkateboardVisual/GoldSkateboard");
+
             Transform container = avatarEquippablePrefab.transform.Find("GoldSkateboardVisual/GoldSkateboard/BoardContainer/Board");
             if (container != null)
             {
@@ -371,7 +583,8 @@ namespace Hoverboard.Factory
 
             var equippableComponent = equippablePrefab.GetComponent<Skateboard_Equippable>();
 
-            // ⚠️ CRITICAL: Clear the serialized reference first
+            HideTrucks(equippablePrefab.transform, "GoldSkateboardVisual/GoldSkateboard");
+
             equippableComponent.SkateboardPrefab = null;
 
             Transform container = equippablePrefab.transform.Find("GoldSkateboardVisual/GoldSkateboard/BoardContainer/Board");
@@ -390,6 +603,9 @@ namespace Hoverboard.Factory
             GameObject prefab = Resources.Load<GameObject>("skateboards/goldenskateboard/GoldSkateboard_Stored");
             var storedPrefab = GameObject.Instantiate(prefab, refStorage.transform);
             storedPrefab.name = "Hoverboard_Stored";
+
+            HideTrucks(storedPrefab.transform, "GoldSkateboardVisual/GoldSkateboard");
+
             Transform container = storedPrefab.transform.Find("GoldSkateboardVisual/GoldSkateboard/BoardContainer/Board");
             if (container != null)
             {
@@ -425,9 +641,7 @@ namespace Hoverboard.Factory
                     hoverDef.Category = EItemCategory.Tools;
                     hoverDef.AvailableInDemo = true;
                     hoverDef.BasePurchasePrice = HoverboardConfig.Price.Value;
-                    //hoverDef.Keywords = new string[] { "hover", "skateboard", "futuristic" };
                     hoverDef.ResellMultiplier = HoverboardConfig.ResellMultiplier.Value;
-                    //hoverDef.LabelDisplayColor = new Color(0f, 0.8f, 1f);
 
                     if (hoverIcon != null)
                     {
@@ -453,6 +667,36 @@ namespace Hoverboard.Factory
                 container.GetComponent<MeshFilter>().mesh = hoverBoardFilter.mesh;
                 container.GetComponent<MeshRenderer>().materials = hoverBoardRenderer.materials;
             }
+        }
+
+        /// <summary>
+        /// Resets all scene-bound state so Init() can run cleanly on the next load.
+        /// Called when returning to the Menu scene.
+        /// Asset references (hoverboardPrefab, hoverBoardFilter, hoverBoardRenderer,
+        /// rollingAudio, hoverIcon) are DontDestroyOnLoad and intentionally preserved.
+        /// Reflection field caches are type-bound and intentionally preserved.
+        /// </summary>
+        public static void Reset()
+        {
+            // Scene-instantiated GameObjects - destroyed on scene unload
+            refStorage = null;
+            visualPrefab = null;
+
+            // Component references that live on scene-instantiated objects
+            hoverboardPrefab = null;
+            hoverSkateboard = null;
+            hoverVisuals = null;
+            hoverEffects = null;
+            hoverAvatar = null;
+            hoverEquippable = null;
+            hoverStored = null;
+
+            // Trail position cache is read from the prefab's trail transforms.
+            // Must be cleared so it is re-read from the fresh prefab on next Init().
+            _trail0OriginalLocalPosition = null;
+            _trailMidpointLocalPosition = null;
+
+            Utility.Log("HoverboardFactory.Reset: scene state cleared");
         }
     }
 }

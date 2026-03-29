@@ -1,9 +1,9 @@
 {
-	"name": "TEMPLATE BABY",
-	"version_number": "1.0.0",
-	"description": "THIS DESCRIBES A MOD",
-	"website_url": "",
+	"name": "Hoverboard",
+	"version_number": "1.0.1",
+	"description": "Adds a hoverboard that you can purchase from the skate shack",
+	"website_url": "https://github.com/OvrwghtUnicorn/Hoverboard",
 	"dependencies": [
-		"LavaGang-MelonLoader-0.7.0"
+		"LavaGang-MelonLoader-0.7.2"
 	]
 }

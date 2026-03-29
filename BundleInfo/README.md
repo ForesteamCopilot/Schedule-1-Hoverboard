@@ -1,18 +1,16 @@
-# MOD INFOR HERE
-Hire Me gives you access to manny's network by providing a User Interface for hiring employees
+# Summary
+Adds a fully functional hoverboard to Schedule I. Purchase it from Jeff at the Skate Shack and take it to the streets — no wheels required. There's an added bonus of being able to fly over all the police barricades.
 
-# What does this mod do?
-
+# Main features
+- **Buy it at the Skate Shack** — The hoverboard appears as a purchasable item in Jeff's skateboard shop alongside the other boards
+- **Hover Physics** — floats above the ground using a tunable PID controller; reacts dynamically to terrain and weather
+- **Customizable Hover physics** — configure the hoverboard how you want it to be either through the file located at `UserData/MelonPreferences.cfg` or by using the [ModsApp by k073l](https://thunderstore.io/c/schedule-i/p/k0Mods/ModsApp/)
+- **Customizable trails** — configure trail count, width, spread and color independently per trail
+- **Multiplayer-ish** — the board spawns and despawns over the network using FishNet, the issue is the golden skateboard will appear instead of the hoverboard model
 
 # Found a Bug?
 Contact me on [Nexus](https://next.nexusmods.com/profile/OverweightUnicorn)
 
-# Mod Showcase
-[YT VIDEO SHOWCASE]()
-<br>
-<sup>Consider subscribing as well to support my content<sup>
-
-# Future Improvements
 
 # Installation
 1. Download and install [MelonLoader](https://github.com/LavaGang/MelonLoader/releases)
