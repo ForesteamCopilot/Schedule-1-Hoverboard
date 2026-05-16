@@ -11,25 +11,36 @@
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Configurations>MONO;IL2CPP</Configurations>
-		<ReleaseDir>Q:\code\UnityModding\Schedule_1_Modding\Hoverboard\BundleInfo\</ReleaseDir> <!--Change this-->
+		<ReleaseDir Condition="'$(OS)' == 'Windows_NT'">Q:\code\UnityModding\Schedule_1_Modding\Hoverboard\BundleInfo\</ReleaseDir> <!--Change this-->
+		<ReleaseDir Condition="'$(OS)' != 'Windows_NT'">$(MSBuildProjectDirectory)/BundleInfo</ReleaseDir>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'MONO'">
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<AssemblyName>$(RootNamespace)_Mono_$(FileVersion)</AssemblyName>
+		<BuildFlavor>Mono</BuildFlavor>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'IL2CPP'">
 		<TargetFramework>net6.0</TargetFramework>
 		<AssemblyName>$(RootNamespace)_IL2Cpp_$(FileVersion)</AssemblyName>
+		<BuildFlavor>IL2Cpp</BuildFlavor>
 	</PropertyGroup>
 	
-	<PropertyGroup Condition="'$(Configuration)' == 'MONO'">
+	<PropertyGroup Condition="'$(Configuration)' == 'MONO' and '$(OS)' == 'Windows_NT'">
 		<S1Dir>Q:\code\UnityModding\DepotDownloader-windows-x64\Schedule 1 alternate</S1Dir>
 	</PropertyGroup>
-	
-	<PropertyGroup Condition="'$(Configuration)' == 'IL2CPP'">
+
+	<PropertyGroup Condition="'$(Configuration)' == 'MONO' and '$(OS)' != 'Windows_NT'">
+		<S1Dir>/mnt/gaymes/SteamLibrary/steamapps/common/Schedule I</S1Dir>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'IL2CPP' and '$(OS)' == 'Windows_NT'">
 		<S1Dir>Z:\Steam\steamapps\common\Schedule I</S1Dir>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'IL2CPP' and '$(OS)' != 'Windows_NT'">
+		<S1Dir>/mnt/gaymes/SteamLibrary/steamapps/common/Schedule I</S1Dir>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -61,7 +72,7 @@
     <Publicize Include="ScheduleOne.Core" />
   </ItemGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(OS)' == 'Windows_NT'">
     <!-- If Schedule 1 is running kill the task -->
     <Exec Command="cmd /c &quot;tasklist | findstr /I &quot;Schedule.*I.exe&quot; &gt;nul &amp;&amp; taskkill /F /IM &quot;Schedule I.exe&quot; || exit /b 0&quot;" />
     <!-- Delete older versions of the mod -->
@@ -72,6 +83,19 @@
     <!-- Copy Mod to Release Folder -->
     <Exec Command="COPY &quot;$(TargetPath)&quot; &quot;$(ReleaseDir)&quot;&#xD;&#xA;" />
   </Target>
+
+	<Target Name="PostBuildLinux" AfterTargets="PostBuildEvent" Condition="'$(OS)' != 'Windows_NT'">
+		<!-- If Schedule 1 is running under Proton, stop it to avoid file lock issues -->
+		<Exec Command="pkill -f &quot;Schedule I.exe&quot; &gt;/dev/null 2&gt;&amp;1 || true" />
+		<!-- Ensure output folders exist -->
+		<Exec Command="mkdir -p &quot;$(S1Dir)/Mods&quot; &quot;$(ReleaseDir)&quot;" />
+		<!-- Delete older versions of the mod for this branch -->
+		<Exec Command="find &quot;$(S1Dir)/Mods&quot; -maxdepth 1 -type f -name &quot;$(RootNamespace)_$(BuildFlavor)_*.dll&quot; ! -name &quot;$(TargetFileName)&quot; -delete || true" />
+		<Exec Command="find &quot;$(ReleaseDir)&quot; -maxdepth 1 -type f -name &quot;$(RootNamespace)_$(BuildFlavor)_*.dll&quot; ! -name &quot;$(TargetFileName)&quot; -delete || true" />
+		<!-- Copy mod to Mods and Release folders -->
+		<Exec Command="cp &quot;$(TargetPath)&quot; &quot;$(S1Dir)/Mods/&quot;" />
+		<Exec Command="cp &quot;$(TargetPath)&quot; &quot;$(ReleaseDir)/&quot;" />
+	</Target>
 
 	<ItemGroup Condition="'$(Configuration)' == 'MONO'">
 		<Reference Include="ScheduleOne.Core">
