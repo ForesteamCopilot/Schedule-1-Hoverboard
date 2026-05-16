@@ -28,78 +28,81 @@ using ScheduleOne.Skating;
 
 namespace Hoverboard
 {
-    public static class BuildInfo
-    {
-        public const string Name = "Hoverboard";
-        public const string Description = "Adds a hoverboard to the game...because why not?";
-        public const string Author = "OverweightUnicorn";
-        public const string Company = "UnicornsCanMod";
-        public const string Version = "1.0.1";
-        public const string DownloadLink = null;
-    }
+	public static class BuildInfo
+	{
+		public const string Name = "Hoverboard";
+		public const string Description = "Adds a hoverboard to the game...because why not?";
+		public const string Author = "OverweightUnicorn";
+		public const string Company = "UnicornsCanMod";
+		public const string Version = "1.0.1";
+		public const string DownloadLink = null;
+	}
 
-    public class Core : MelonMod
-    {
+	public class Core : MelonMod
+	{
 
-        public override void OnInitializeMelon()
-        {
-            AssetBundleUtils.Initialize(this);
-            HoverboardConfig.Initialize();
-        }
-        public override void OnLateInitializeMelon()
-        {
-            LoadManager.Instance.onLoadComplete.AddListener((UnityAction)InitMod);
-        }
+		public override void OnInitializeMelon()
+		{
+			AssetBundleUtils.Initialize(this);
+			HoverboardConfig.Initialize();
+		}
+		public override void OnLateInitializeMelon()
+		{
+			LoadManager.Instance.onLoadComplete.AddListener((UnityAction)InitMod);
+		}
 
-        public override void OnSceneWasLoaded(int buildIndex, string sceneName)
-        {
+		public override void OnSceneWasLoaded(int buildIndex, string sceneName)
+		{
 
-            if (sceneName == "Main" && HoverboardFactory.hoverboardPrefab == null)
-            {
-                HoverboardFactory.Init();
-            } else
-            {
-                HoverboardFactory.Reset();
-            }
-        }
+			if (sceneName == "Main" && HoverboardFactory.hoverboardPrefab == null)
+			{
+				HoverboardFactory.Init();
+			}
+			else
+			{
+				HoverboardFactory.Reset();
+			}
+		}
 
-        public void InitMod()
-        {
-            var jeff = GameObject.FindObjectOfType<Jeff>();
-            if (jeff != null)
-            {
-                GameObject goJeff = jeff.gameObject;
-                Transform dialogue = goJeff.transform.Find("Dialogue");
-                if (dialogue != null)
-                {
-                    DialogueController_SkateboardSeller sellerController = dialogue.gameObject.GetComponent<DialogueController_SkateboardSeller>();
-                    if (sellerController != null && Registry.ItemExists(HoverboardFactory.ITEM_ID))
-                    {
-                        ItemDefinition hoverItemDef = Registry.GetItem<ItemDefinition>(HoverboardFactory.ITEM_ID);
-                        var hoverOption = new DialogueController_SkateboardSeller.Option()
-                        {
-                            Name = "Hoverboard",
-                            Price = HoverboardConfig.Price.Value,
-                            IsAvailable = hoverItemDef != null,
-                            NotAvailableReason = hoverItemDef != null ? "You aren't cool enough" : "Item definition not found",
-                            Item = hoverItemDef
-                        };
+		public void InitMod()
+		{
+			bool itemRegistered = HoverboardFactory.EnsureStorableDefinitionRegistered();
 
-                        sellerController.Options.Add(hoverOption);
-                        Utility.Success("Added hoverboard to seller options");
-                    }
-                    else
-                    {
-                        Utility.Log("Dialogue Controller doesn't exist");
-                    }
-                }
-                else
-                {
-                    Utility.Error("Could not find Dialogue child on Jeff");
-                }
-            }
-        }
-    }
+			var jeff = GameObject.FindObjectOfType<Jeff>();
+			if (jeff != null)
+			{
+				GameObject goJeff = jeff.gameObject;
+				Transform dialogue = goJeff.transform.Find("Dialogue");
+				if (dialogue != null)
+				{
+					DialogueController_SkateboardSeller sellerController = dialogue.gameObject.GetComponent<DialogueController_SkateboardSeller>();
+					if (sellerController != null && itemRegistered)
+					{
+						ItemDefinition hoverItemDef = Registry.GetItem<ItemDefinition>(HoverboardFactory.ITEM_ID);
+						var hoverOption = new DialogueController_SkateboardSeller.Option()
+						{
+							Name = "Hoverboard",
+							Price = HoverboardConfig.Price.Value,
+							IsAvailable = hoverItemDef != null,
+							NotAvailableReason = hoverItemDef != null ? "You aren't cool enough" : "Item definition not found",
+							Item = hoverItemDef
+						};
+
+						sellerController.Options.Add(hoverOption);
+						Utility.Success("Added hoverboard to seller options");
+					}
+					else
+					{
+						Utility.Log($"InitMod: sellerController missing={sellerController == null}, itemRegistered={itemRegistered}");
+					}
+				}
+				else
+				{
+					Utility.Error("Could not find Dialogue child on Jeff");
+				}
+			}
+		}
+	}
 
 
 }
