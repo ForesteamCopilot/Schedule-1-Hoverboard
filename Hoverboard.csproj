@@ -15,18 +15,26 @@
         <ReleaseDir Condition="'$(OS)' != 'Windows_NT'">$(MSBuildProjectDirectory)/BundleInfo</ReleaseDir>
     </PropertyGroup>
 
+    <!-- Design-time fallback for Roslyn/C# extension loads that may not pass MONO/IL2CPP. -->
+    <PropertyGroup>
+        <Configuration Condition="'$(Configuration)' == ''">IL2CPP</Configuration>
+        <TargetFramework Condition="'$(TargetFramework)' == ''">net6.0</TargetFramework>
+        <BuildFlavor Condition="'$(BuildFlavor)' == ''">IL2Cpp</BuildFlavor>
+    </PropertyGroup>
+
     <PropertyGroup Condition="'$(Configuration)' == 'MONO'">
         <TargetFramework>netstandard2.1</TargetFramework>
         <AssemblyName>$(RootNamespace)_Mono_$(FileVersion)</AssemblyName>
         <BuildFlavor>Mono</BuildFlavor>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)' == 'IL2CPP'">
+    <PropertyGroup Condition="'$(Configuration)' == 'IL2CPP' Or '$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release'">
         <TargetFramework>net6.0</TargetFramework>
         <AssemblyName>$(RootNamespace)_IL2Cpp_$(FileVersion)</AssemblyName>
         <BuildFlavor>IL2Cpp</BuildFlavor>
+        <DefineConstants>$(DefineConstants);IL2CPP</DefineConstants>
     </PropertyGroup>
-    
+
     <PropertyGroup Condition="'$(Configuration)' == 'MONO' and '$(OS)' == 'Windows_NT'">
         <S1Dir>Q:\code\UnityModding\DepotDownloader-windows-x64\Schedule 1 alternate</S1Dir>
     </PropertyGroup>
@@ -35,11 +43,11 @@
         <S1Dir>/mnt/gaymes/SteamLibrary/steamapps/common/Schedule I</S1Dir>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)' == 'IL2CPP' and '$(OS)' == 'Windows_NT'">
+    <PropertyGroup Condition="('$(Configuration)' == 'IL2CPP' Or '$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release') and '$(OS)' == 'Windows_NT'">
         <S1Dir>Z:\Steam\steamapps\common\Schedule I</S1Dir>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)' == 'IL2CPP' and '$(OS)' != 'Windows_NT'">
+    <PropertyGroup Condition="('$(Configuration)' == 'IL2CPP' Or '$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release') and '$(OS)' != 'Windows_NT'">
         <S1Dir>/mnt/gaymes/SteamLibrary/steamapps/common/Schedule I</S1Dir>
     </PropertyGroup>
 
@@ -547,7 +555,7 @@
         </Reference>
 
     </ItemGroup>
-    <ItemGroup Condition="'$(Configuration)' == 'IL2CPP'">
+    <ItemGroup Condition="'$(Configuration)' == 'IL2CPP' Or '$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release'">
         <Reference Include="Il2CppScheduleOne.Core">
             <HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\Il2CppScheduleOne.Core.dll</HintPath>
         </Reference>
