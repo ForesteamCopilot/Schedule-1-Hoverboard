@@ -97,9 +97,10 @@ namespace Hoverboard.Factory
                         hoverEquippable.SkateboardPrefab = hoverSkateboard;
                         hoverSkateboard.Equippable = hoverEquippable;
                         hoverSkateboard.SlowOnTerrain = false;
-                        var skateData = UnityEngine.ScriptableObject.Instantiate(hoverSkateboard._defaultData,refStorage.transform);
+                        var skateData = UnityEngine.ScriptableObject.Instantiate(hoverSkateboard._defaultData, refStorage.transform);
 
-                        if (skateData != null) { 
+                        if (skateData != null)
+                        {
                             hoverData = skateData;
                             hoverSkateboard._defaultData = skateData;
                         }
@@ -277,8 +278,8 @@ namespace Hoverboard.Factory
             // -1 sentinel in Blend(), which the game treats as "don't override" (multiplier stays 1)
             SkateboardOverrideData neutralOverride = ScriptableObject.CreateInstance<SkateboardOverrideData>();
             neutralOverride.Categories =
-               SkateboardOverrideData.OverrideCategory.Turning |
-                 SkateboardOverrideData.OverrideCategory.Friction;
+                 SkateboardOverrideData.OverrideCategory.Turning |
+                     SkateboardOverrideData.OverrideCategory.Friction;
             // Hover category intentionally omitted - no hover flags
 
             neutralOverride.Settings = new SkateboardSettings
@@ -389,13 +390,13 @@ namespace Hoverboard.Factory
                     trail1Pos.x = centreX - trail0OffsetFromCentre;
                     // Apply spread on top
                     trails[0].transform.localPosition = new Vector3(
-                centreX - halfSpread,
-               _trail0OriginalLocalPosition.Value.y,
-                  _trail0OriginalLocalPosition.Value.z);
+            centreX - halfSpread,
+         _trail0OriginalLocalPosition.Value.y,
+                _trail0OriginalLocalPosition.Value.z);
                     trails[1].transform.localPosition = new Vector3(
-             centreX + halfSpread,
-                  trail1Pos.y,
-           trail1Pos.z);
+     centreX + halfSpread,
+                trail1Pos.y,
+ trail1Pos.z);
                     ApplyTrailAppearance(trails[1], width, HoverboardConfig.TrailColors[1].Value);
                 }
             }
@@ -418,7 +419,12 @@ namespace Hoverboard.Factory
 
         public static void LoadCustomAssets()
         {
-            AssetBundleUtils.LoadAssetBundle("hoverboard");
+            var bundle = AssetBundleUtils.LoadAssetBundle("hoverboard");
+            if (bundle == null)
+            {
+                Utility.Error("LoadCustomAssets: failed to load 'hoverboard' asset bundle.");
+                return;
+            }
 
             GameObject hoverboardAsset = AssetBundleUtils.LoadAssetFromBundle<GameObject>("hoverboard.prefab", "hoverboard");
             if (hoverboardAsset != null && hoverboardPrefab == null)
@@ -523,7 +529,7 @@ namespace Hoverboard.Factory
             GameObject prefab = Resources.Load<GameObject>("skateboards/goldenskateboard/GoldSkateboard");
             var skateboardPrefab = GameObject.Instantiate(prefab, refStorage.transform);
             skateboardPrefab.name = "Hoverboard";
-            
+
             // Hide the trucks since hoverboards don't need them
             HideTrucks(skateboardPrefab.transform, "Model/Skateboard");
 
@@ -619,41 +625,80 @@ namespace Hoverboard.Factory
 
         public static StorableItemDefinition CreateStorableDefinition()
         {
-            ItemDefinition itemDef = Registry.GetItem<ItemDefinition>(SOURCE_SKATEBOARD_ID);
-            if (itemDef != null)
+            if (Registry.ItemExists(ITEM_ID))
             {
+                ItemDefinition existingItem = Registry.GetItem<ItemDefinition>(ITEM_ID);
 #if IL2CPP
-                StorableItemDefinition baseDef = itemDef.TryCast<StorableItemDefinition>();
+                StorableItemDefinition existingDef = existingItem != null ? existingItem.TryCast<StorableItemDefinition>() : null;
 #elif MONO
-                StorableItemDefinition baseDef = itemDef as StorableItemDefinition;
+                StorableItemDefinition existingDef = existingItem as StorableItemDefinition;
 #endif
-                StorableItemDefinition hoverDef = UnityEngine.Object.Instantiate(baseDef);
-                if (hoverDef != null)
-                {
-                    hoverDef.ID = ITEM_ID;
-                    hoverDef.name = ITEM_NAME;
-                    hoverDef.Name = ITEM_NAME;
-                    hoverDef.Description = "A futuristic skateboard that hovers above the ground.";
-                    hoverDef.StackLimit = 1;
-                    hoverDef.Equippable = hoverEquippable;
-                    hoverDef.StoredItem = hoverStored;
-                    hoverDef.legalStatus = ELegalStatus.Legal;
-                    hoverDef.Category = EItemCategory.Tools;
-                    hoverDef.AvailableInDemo = true;
-                    hoverDef.BasePurchasePrice = HoverboardConfig.Price.Value;
-                    hoverDef.ResellMultiplier = HoverboardConfig.ResellMultiplier.Value;
-
-                    if (hoverIcon != null)
-                    {
-                        hoverDef.Icon = hoverIcon;
-                    }
-
-                    Singleton<Registry>.Instance.AddToRegistry(hoverDef);
-                    return hoverDef;
-                }
+                return existingDef;
             }
 
+            ItemDefinition itemDef = Registry.GetItem<ItemDefinition>(SOURCE_SKATEBOARD_ID);
+            if (itemDef == null)
+            {
+                Utility.Error($"CreateStorableDefinition: source item '{SOURCE_SKATEBOARD_ID}' not found in Registry. Registration likely ran too early or source ID changed.");
+                return null;
+            }
+
+#if IL2CPP
+            StorableItemDefinition baseDef = itemDef.TryCast<StorableItemDefinition>();
+#elif MONO
+            StorableItemDefinition baseDef = itemDef as StorableItemDefinition;
+#endif
+            if (baseDef == null)
+            {
+                Utility.Error($"CreateStorableDefinition: source item '{SOURCE_SKATEBOARD_ID}' is not a StorableItemDefinition.");
+                return null;
+            }
+
+            if (hoverEquippable == null || hoverStored == null)
+            {
+                Utility.Error("CreateStorableDefinition: hover prefabs are not ready (Equippable or StoredItem is null).");
+                return null;
+            }
+
+            StorableItemDefinition hoverDef = UnityEngine.Object.Instantiate(baseDef);
+            if (hoverDef != null)
+            {
+                hoverDef.ID = ITEM_ID;
+                hoverDef.name = ITEM_NAME;
+                hoverDef.Name = ITEM_NAME;
+                hoverDef.Description = "A futuristic skateboard that hovers above the ground.";
+                hoverDef.StackLimit = 1;
+                hoverDef.Equippable = hoverEquippable;
+                hoverDef.StoredItem = hoverStored;
+                hoverDef.legalStatus = ELegalStatus.Legal;
+                hoverDef.Category = EItemCategory.Tools;
+                hoverDef.AvailableInDemo = true;
+                hoverDef.BasePurchasePrice = HoverboardConfig.Price.Value;
+                hoverDef.ResellMultiplier = HoverboardConfig.ResellMultiplier.Value;
+
+                if (hoverIcon != null)
+                {
+                    hoverDef.Icon = hoverIcon;
+                }
+
+                Singleton<Registry>.Instance.AddToRegistry(hoverDef);
+                Utility.Success($"CreateStorableDefinition: registered item '{ITEM_ID}'.");
+                return hoverDef;
+            }
+
+            Utility.Error("CreateStorableDefinition: failed to instantiate hoverboard definition clone.");
+
             return null;
+        }
+
+        public static bool EnsureStorableDefinitionRegistered()
+        {
+            if (Registry.ItemExists(ITEM_ID))
+            {
+                return true;
+            }
+
+            return CreateStorableDefinition() != null;
         }
 
         public static void CreateVisualPrefab()

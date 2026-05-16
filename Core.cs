@@ -57,7 +57,8 @@ namespace Hoverboard
             if (sceneName == "Main" && HoverboardFactory.hoverboardPrefab == null)
             {
                 HoverboardFactory.Init();
-            } else
+            }
+            else
             {
                 HoverboardFactory.Reset();
             }
@@ -65,6 +66,8 @@ namespace Hoverboard
 
         public void InitMod()
         {
+            bool itemRegistered = HoverboardFactory.EnsureStorableDefinitionRegistered();
+
             var jeff = GameObject.FindObjectOfType<Jeff>();
             if (jeff != null)
             {
@@ -73,7 +76,7 @@ namespace Hoverboard
                 if (dialogue != null)
                 {
                     DialogueController_SkateboardSeller sellerController = dialogue.gameObject.GetComponent<DialogueController_SkateboardSeller>();
-                    if (sellerController != null && Registry.ItemExists(HoverboardFactory.ITEM_ID))
+                    if (sellerController != null && itemRegistered)
                     {
                         ItemDefinition hoverItemDef = Registry.GetItem<ItemDefinition>(HoverboardFactory.ITEM_ID);
                         var hoverOption = new DialogueController_SkateboardSeller.Option()
@@ -90,7 +93,7 @@ namespace Hoverboard
                     }
                     else
                     {
-                        Utility.Log("Dialogue Controller doesn't exist");
+                        Utility.Log($"InitMod: sellerController missing={sellerController == null}, itemRegistered={itemRegistered}");
                     }
                 }
                 else
