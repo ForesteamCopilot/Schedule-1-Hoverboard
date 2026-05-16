@@ -13,6 +13,37 @@
 - Change S1Dir to your folder (mono and Il2cpp)
 - **Read comments in .csproj**
 
+## Linux Build
+
+1. Install prerequisites:
+
+```bash
+sudo pacman -S --needed dotnet-sdk
+```
+
+2. Make sure Schedule I and MelonLoader are installed, then launch the game once.
+   This generates MelonLoader assemblies needed for compile.
+
+3. Find your actual game folder:
+
+```bash
+find "$HOME/.steam/steam/steamapps/common" \
+   "$HOME/.local/share/Steam/steamapps/common" \
+   -maxdepth 1 -type d -iname "schedule*"
+```
+
+### Build IL2CPP (main branch):
+
+```bash
+dotnet build -c IL2CPP -p:S1Dir="/path/to/Schedule I"
+```
+
+### Build MONO (alternate branch):
+
+```bash
+dotnet build -c MONO -p:S1Dir="/path/to/Schedule I alternate"
+```
+
 ## Note
 I removed the reference to edgegap due to warnings congesting the console output, also I've never used it in a mod. If you need it paste the following in your csproj with all the other references
 
