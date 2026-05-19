@@ -1,0 +1,22 @@
+{
+  "editor.detectIndentation": false,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 4,
+  "editor.renderWhitespace": "boundary",
+  "files.eol": "\n",
+  "[csharp]": {
+    "editor.detectIndentation": false,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4
+  },
+  "[xml]": {
+    "editor.detectIndentation": false,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4
+  },
+  "[markdown]": {
+    "editor.detectIndentation": false,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  }
+}
